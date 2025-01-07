@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Lucro</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #343a40; /* Fundo escuro suave */
+            color: #f8f9fa; /* Texto claro para melhor contraste */
+        }
+        .container {
+            margin-top: 50px;
+        }
+        .card {
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: #495057; /* Cor de fundo da card */
+        }
+        .input-group-text {
+            font-weight: bold;
+        }
+        .button-group {
+            margin-top: 20px;
+        }
+        .result p {
+            margin: 5px 0;
+            font-size: 18px;
+        }
+        .header {
+            font-family: 'Arial', sans-serif;
+            color: #007bff;
+        }
+        .btn {
+            width: 100px;
+            margin-top: 10px;
+        }
+        .btn-large {
+            width: 150px;
+            height: 50px;
+            font-size: 18px;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+        }
+        .input-group-append {
+            display: flex;
+            align-items: center;
+        }
+        #entryOutput {
+            font-size: 2em; /* 2x maior que o restante do texto */
+        }
+        #copyButton {
+            width: auto; /* Retorna ao tamanho original */
+            background-color: #007bff; /* Cor azul */
+            color: #f8f9fa; /* Texto claro */
+        }
+        #retornoOutput {
+            color: yellow;
+        }
+        #lucroOutput {
+            color: green;
+        }
+        #prejuizoAcumuladoOutput {
+            color: red;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-5 header">Calculadora de Lucro</h1>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="entryOutput" readonly>
+                        <div class="input-group-append">
+                            <button class="btn" type="button" id="copyButton" data-clipboard-text="">Copiar</button>
+                        </div>
+                    </div>
+                    <p class="text-center" id="retornoOutput">Retorno sobre aposta:</p>
+                    <div class="button-group text-center">
+                        <button id="winButton" class="btn btn-success btn-large mr-2">Win: 0</button>
+                        <button id="lossButton" class="btn btn-danger btn-large mr-2">Loss: 0</button>
+                        <button id="resetButton" class="btn btn-warning">Reset</button>
+                    </div>
+                    <div class="result text-center mt-4">
+                        <p id="lucroOutput"></p>
+                        <p id="prejuizoAcumuladoOutput"></p>
+                        <p id="totalLucroOutput"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Pergunta ao usuário os valores iniciais
+        let multiplicador = parseFloat(prompt("Qual é o multiplicador que você deseja usar?", "2"));
+        let lucro_min = parseFloat(prompt("Qual é o valor mínimo de lucro que você deseja?", "1"));
+
+        let entries = [];
+        let contador_win = 0;
+        let contador_loss = 0;
+        let prejuizo_acumulado = 0;
+        let total_lucro = 0;
+
+        function calculate_return(entry, multiplier) {
+            return entry * multiplier;
+        }
+
+        function calculate_profit(entry, multiplier, prejuizo_acumulado) {
+            return (entry * multiplier) - entry - prejuizo_acumulado;
+        }
+
+        function find_initial_entry(lucro_min, multiplier) {
+            for (let i = 1; i < Number.MAX_SAFE_INTEGER; i++) { // Sem limitação de intervalo
+                let entry = i * 0.01; // Comece com 0.01 e aumente para encontrar a entrada inicial
+                let lucro = calculate_profit(entry, multiplier, 0); // Prejuizo_acumulado é 0 na primeira entrada
+                if (lucro >= lucro_min) {
+                    return entry;
+                }
+            }
+            return null;
+        }
+
+        function find_next_entry(prejuizo_acumulado, lucro_min, multiplier) {
+            for (let i = 1; i < Number.MAX_SAFE_INTEGER; i++) { // Sem limitação de intervalo
+                let entry = i * 0.01; // Comece com 0.01 e aumente para encontrar a próxima entrada
+                let lucro = calculate_profit(entry, multiplier, prejuizo_acumulado);
+                if (lucro >= lucro_min) {
+                    return entry;
+                }
+            }
+            return null;
+        }
+
+        function updateDisplay() {
+            let entry = entries[entries.length - 1];
+            let retorno = calculate_return(entry, multiplicador);
+            let lucro = calculate_profit(entry, multiplicador, prejuizo_acumulado);
+
+            $('#entryOutput').val(`${entry.toFixed(2)}`);
+            $('#copyButton').attr('data-clipboard-text', `${entry.toFixed(2)}`);
+            $('#retornoOutput').text(`Retorno sobre aposta: ${retorno.toFixed(2)}`);
+            $('#lucroOutput').text(`Lucro Líquido: ${lucro.toFixed(2)}`);
+            $('#prejuizoAcumuladoOutput').text(`Prejuízo acumulado: ${prejuizo_acumulado.toFixed(2)}`);
+            $('#totalLucroOutput').text(`Soma do Lucro: ${total_lucro.toFixed(2)}`);
+            $('#winButton').text(`Win: ${contador_win}`);
+            $('#lossButton').text(`Loss: ${contador_loss}`);
+        }
+
+        $('#winButton').click(() => {
+            let entry = entries[entries.length - 1];
+            let lucro = calculate_profit(entry, multiplicador, prejuizo_acumulado);
+            total_lucro += lucro; // Soma do lucro só acontece quando marca 'win'
+            entries = [find_initial_entry(lucro_min, multiplicador)];
+            contador_win += 1;
+            prejuizo_acumulado = 0;
+            updateDisplay();
+        });
+
+        $('#lossButton').click(() => {
+            let entry = entries[entries.length - 1];
+            prejuizo_acumulado += entry;
+            let next_entry = find_next_entry(prejuizo_acumulado, lucro_min, multiplicador);
+            entries.push(next_entry);
+            contador_loss += 1;
+            updateDisplay();
+        });
+
+        $('#resetButton').click(() => {
+            entries = [find_initial_entry(lucro_min, multiplicador)];
+            contador_win = 0;
+            contador_loss = 0;
+            prejuizo_acumulado = 0;
+            total_lucro = 0;
+            updateDisplay();
+        });
+
+        // Inicializa a primeira entrada
+        entries = [find_initial_entry(lucro_min, multiplicador)];
+        // Inicializa a exibição
+        updateDisplay();
+
+        // Inicializa o clipboard.js
+        new ClipboardJS('#copyButton');
+    </script>
+</body>
+</html>
